@@ -18,9 +18,13 @@ def performSignIn():
     browser.find_element_by_id("ap_email").send_keys(os.getenv('U_USEREMAIL'))
     browser.find_element_by_id("ap_password").send_keys(os.getenv('U_PASSWORD'))
 
-    #browser.find_element_by_id("signInSubmit").click()
+    browser.find_element_by_id("signInSubmit").click()
 
+def createPaperback():
+    browser.get('https://kdp.amazon.com/en_US/title-setup/paperback/new/details?ref_=kdp_kdp_BS_D_cr_ti')
 
 if __name__=="__main__":
 
     performSignIn()
+
+    createPaperback()
