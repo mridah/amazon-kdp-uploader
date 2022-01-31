@@ -50,6 +50,25 @@ def createPaperback(title, subtitle, description, keywords):
 
     browser.find_element_by_css_selector("textarea.cke_source").send_keys(description)
 
+    # filling keywords
+    keywords_list = keywords.split(",")
+    print(keywords_list)
+    keyword_counter = -1
+    for each_keyword in keywords_list:
+        keyword_counter+=1;
+        if keyword_counter > 6:
+            break
+        wait = WebDriverWait(browser, 10)
+        browser.find_element_by_id("data-print-book-keywords-" + str(keyword_counter)).send_keys(each_keyword)
+
+
+    # adult content
+    if os.getenv('U_IS_ADULT_CONTENT') == 'y':
+        browser.find_element_by_css_selector("#data-print-book-is-adult-content input[value='true']").click()
+    else:
+        browser.find_element_by_css_selector("#data-print-book-is-adult-content input[value='false']").click()
+
+
 
 if __name__=="__main__":
 
