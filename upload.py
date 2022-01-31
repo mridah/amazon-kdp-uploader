@@ -1,5 +1,6 @@
 import os
 import csv
+import warnings
 from selenium import webdriver, common
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -9,6 +10,8 @@ from dotenv import load_dotenv, find_dotenv
 
 # loading env file
 load_dotenv(find_dotenv())
+
+warnings.simplefilter("ignore")
 
 # initializing the titles and rows list
 csv_fields = []
@@ -52,7 +55,7 @@ def createPaperback(title, subtitle, description, keywords):
 
     # filling keywords
     keywords_list = keywords.split(",")
-    print(keywords_list)
+
     keyword_counter = -1
     for each_keyword in keywords_list:
         keyword_counter+=1;
@@ -61,6 +64,11 @@ def createPaperback(title, subtitle, description, keywords):
         wait = WebDriverWait(browser, 10)
         browser.find_element_by_id("data-print-book-keywords-" + str(keyword_counter)).send_keys(each_keyword)
 
+    # public domain
+    if os.getenv('U_IS_PUBLIC_DOMAIN') == 'y':
+        browser.find_element_by_css_selector("#print-book-is-public-domain-field input#public-domain").click()
+    else:
+        browser.find_element_by_css_selector("#print-book-is-public-domain-field input#non-public-domain").click()
 
     # adult content
     if os.getenv('U_IS_ADULT_CONTENT') == 'y':
@@ -71,6 +79,13 @@ def createPaperback(title, subtitle, description, keywords):
 
 
 if __name__=="__main__":
+
+    print('----------------------------')
+    print('-       KDP Uploader       -')
+    print('-      (C) Daywalker       -')
+    print('----------------------------')
+
+    create_counter = 0
 
     performSignIn()
 
@@ -88,6 +103,7 @@ if __name__=="__main__":
             subtitle = row[1]
             description = row[2]
             keywords = row[3]
-            print(row)
+
+            print(' → Filling forms for entry ' + str(create_counter+1) + ' [' + title + ']')
 
             createPaperback(title, subtitle, description, keywords)
