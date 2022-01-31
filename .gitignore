@@ -1,2 +1,5 @@
 .env
 geckodriver.log
+__pycache__/
+upload.spec
+build/
