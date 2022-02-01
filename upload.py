@@ -1,5 +1,6 @@
 import os
 import csv
+import time
 import warnings
 from selenium import webdriver, common
 from selenium.webdriver.common.by import By
@@ -94,6 +95,9 @@ def createPaperback(title, subtitle, description, keywords):
 
     browser.find_element_by_id("category-chooser-ok-button").click()
 
+    time.sleep(6)
+    WebDriverWait(browser, 1000000).until(EC.element_to_be_clickable((By.ID, "save-and-continue-announce"))).click()
+
 
 def findAndSelectCategory(id):
     global category_counter
@@ -101,7 +105,8 @@ def findAndSelectCategory(id):
     if category_counter > 2:
         return
     if len(browser.find_elements_by_id(id)) > 0:
-        browser.find_element_by_id(id).click()
+        WebDriverWait(browser, 1000000).until(EC.element_to_be_clickable((By.ID, id))).click()
+        #browser.find_element_by_id(id).click()
         category_counter+=1
     else:
         browser.find_element_by_css_selector("#category-chooser-root-list .icon.expand-icon").click()
