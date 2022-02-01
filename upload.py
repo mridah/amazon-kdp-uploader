@@ -17,6 +17,8 @@ warnings.simplefilter("ignore")
 csv_fields = []
 csv_rows = []
 
+category_counter = 0
+
 filename = "data.csv"
 
 opts = Options()
@@ -34,6 +36,8 @@ def performSignIn():
     browser.find_element_by_id("signInSubmit").click()
 
 def createPaperback(title, subtitle, description, keywords):
+    global category_counter
+
     browser.get('https://kdp.amazon.com/en_US/title-setup/paperback/new/details?ref_=kdp_kdp_BS_D_cr_ti')
 
     browser.find_element_by_id("data-print-book-title").send_keys(title)
@@ -77,6 +81,32 @@ def createPaperback(title, subtitle, description, keywords):
         browser.find_element_by_css_selector("#data-print-book-is-adult-content input[value='false']").click()
 
 
+    # categories
+    browser.find_element_by_id("data-print-book-categories-button-proto-announce").click()
+    category_list = os.getenv('U_CATEGORIES').split(",")
+    category_counter = 0
+
+    browser.find_element_by_css_selector("#category-chooser-root-list .icon.expand-icon").click()
+    for each_category in category_list:
+
+        # use recursion to find categories
+        findAndSelectCategory(each_category)
+
+    browser.find_element_by_id("category-chooser-ok-button").click()
+
+
+def findAndSelectCategory(id):
+    global category_counter
+
+    if category_counter > 2:
+        return
+    if len(browser.find_elements_by_id(id)) > 0:
+        browser.find_element_by_id(id).click()
+        category_counter+=1
+    else:
+        browser.find_element_by_css_selector("#category-chooser-root-list .icon.expand-icon").click()
+        wait = WebDriverWait(browser, 10)
+        findAndSelectCategory(id)
 
 if __name__=="__main__":
 
