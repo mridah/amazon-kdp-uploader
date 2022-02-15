@@ -2,7 +2,9 @@ import os
 import csv
 import time
 import warnings
+from threading import Thread, Barrier
 from selenium import webdriver, common
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -25,9 +27,17 @@ filename = "data.csv"
 opts = Options()
 #opts.set_headless()
 
-browser = webdriver.Firefox("./")
 
-def performSignIn():
+
+def startProcess(barrier, title, subtitle, description, keywords):
+    browser = webdriver.Firefox("./")
+    performSignIn(browser)
+    time.sleep(5)
+    createPaperback(browser, title, subtitle, description, keywords)
+
+    #barrier.wait()
+
+def performSignIn(browser):
     browser.get('https://kdp.amazon.com/en_US/')
     browser.find_element_by_css_selector("span#signinButton").click()
 
@@ -36,12 +46,18 @@ def performSignIn():
 
     browser.find_element_by_id("signInSubmit").click()
 
-def createPaperback(title, subtitle, description, keywords):
+def createPaperback(browser, title, subtitle, description, keywords):
     global category_counter
 
     browser.get('https://kdp.amazon.com/en_US/title-setup/paperback/new/details?ref_=kdp_kdp_BS_D_cr_ti')
 
-    browser.find_element_by_id("data-print-book-title").send_keys(title)
+    WebDriverWait(browser, 1000000).until(
+        EC.element_to_be_clickable(
+            (By.ID, "data-print-book-title")
+        )
+    ).send_keys(title)
+
+    #browser.find_element_by_id("data-print-book-title").send_keys(title)
     browser.find_element_by_id("data-print-book-subtitle").send_keys(subtitle)
 
     # fill author info if available
@@ -91,27 +107,68 @@ def createPaperback(title, subtitle, description, keywords):
     for each_category in category_list:
 
         # use recursion to find categories
-        findAndSelectCategory(each_category)
+        findAndSelectCategory(browser, each_category)
 
     browser.find_element_by_id("category-chooser-ok-button").click()
 
-    time.sleep(6)
+    time.sleep(2)
     WebDriverWait(browser, 1000000).until(EC.element_to_be_clickable((By.ID, "save-and-continue-announce"))).click()
 
 
-def findAndSelectCategory(id):
+def findAndSelectCategory(browser, id):
+    print("Searching for category " + id)
     global category_counter
 
     if category_counter > 2:
         return
+
+    while len(browser.find_elements_by_id(id)) < 1:
+        WebDriverWait(browser, 10).until(
+            EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, "#category-chooser-root-list .icon.expand-icon")
+            )
+        ).click()
+        #print(time.time())
+        time.sleep(.1)
+
+    print("Found category " + id + ' ; may not yet be clickable')
+
+    while not clickElement(browser, id):
+        WebDriverWait(browser, 10).until(
+            EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, "#category-chooser-root-list .icon.expand-icon")
+            )
+        ).click()
+        time.sleep(.1)
+
+    #WebDriverWait(browser, 100).until(EC.element_to_be_clickable((By.ID, id))).click()
+
+    category_counter+=1
+
+    return
+
+    '''
     if len(browser.find_elements_by_id(id)) > 0:
         WebDriverWait(browser, 1000000).until(EC.element_to_be_clickable((By.ID, id))).click()
         #browser.find_element_by_id(id).click()
         category_counter+=1
     else:
-        browser.find_element_by_css_selector("#category-chooser-root-list .icon.expand-icon").click()
-        wait = WebDriverWait(browser, 10)
+        WebDriverWait(browser, 1000000).until(
+            EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, "#category-chooser-root-list .icon.expand-icon")
+            )
+        ).click()
+        time.sleep(.6)
         findAndSelectCategory(id)
+    '''
+
+def clickElement(browser, id):
+    try:
+        browser.find_element_by_id(id).click()
+        print(id + ' clicked')
+        return True
+    except WebDriverException:
+        return False
 
 if __name__=="__main__":
 
@@ -121,8 +178,12 @@ if __name__=="__main__":
     print('----------------------------')
 
     create_counter = 0
+    number_of_threads = 5
 
-    performSignIn()
+    barrier = Barrier(number_of_threads)
+    threads = []
+
+    #performSignIn()
 
     with open(filename, 'r') as csvfile:
         csvreader = csv.reader(csvfile)
@@ -139,6 +200,13 @@ if __name__=="__main__":
             description = row[2]
             keywords = row[3]
 
-            print(' → Filling forms for entry ' + str(create_counter+1) + ' [' + title + ']')
+            t = Thread(target=startProcess, args=(barrier,title, subtitle, description, keywords,))
+            t.start()
+            threads.append(t)
 
-            createPaperback(title, subtitle, description, keywords)
+    for t in threads:
+        t.join()
+
+            #print(' → Filling forms for entry ' + str(create_counter+1) + ' [' + title + ']')
+
+            #createPaperback(title, subtitle, description, keywords)
